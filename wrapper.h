@@ -13,10 +13,10 @@ extern "C"{
 
     zbar_wrapper_t* zbar_wrapper_init();
     void zbar_wrapper_destroy(zbar_wrapper_t*);
-    zw_symbolset_t* zbar_scan_RGBA32(zbar_wrapper_t*, uint8_t*, int, int);
-    zw_symbol_t* zbar_symbol_next(zw_symbolset_t*);
-    void zbar_symbol_destroy(zw_symbol_t*);
-    void zbar_symbolset_destroy(zw_symbolset_t*);
+    zw_symbolset_t* zbar_wrapper_scan_RGBA32(zbar_wrapper_t*, uint8_t*, int, int);
+    zw_symbol_t* zbar_wrapper_symbol_next(zw_symbolset_t*);
+    void zbar_wrapper_symbol_destroy(zw_symbol_t*);
+    void zbar_wrapper_symbolset_destroy(zw_symbolset_t*);
 
 #ifdef __cplusplus
 }

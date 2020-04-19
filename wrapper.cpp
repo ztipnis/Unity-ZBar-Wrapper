@@ -7,6 +7,7 @@
 #include <vector>
 #include <array>
 #include <limits>
+#include <climits>
 #include "wrapper.h"
 
 #define IS_BIG_ENDIAN (*(uint16_t *)"\0\xff" < 0x100)
@@ -19,7 +20,7 @@ private:
     std::vector<zbar::Symbol>::iterator iter;
 public:
 
-    symbolSet(const SymbolIterator begin, const SymbolIterator end) : iter(symbols.begin()){
+    symbolSet(const zbar::SymbolIterator begin, const zbar::SymbolIterator end) : iter(symbols.begin()){
         std::move(begin, end, std::back_inserter(symbols));
     }
     zw_symbol_t* nextSymbol(){
@@ -27,18 +28,19 @@ public:
             zbar::Symbol sym = *(iter++);
             int symbolLen = sym.get_data_length();
             int minx=INT_MAX, maxx=INT_MIN, miny=INT_MAX, maxy=INT_MIN;
-            for(auto piter = sym.point_begin(); piter != sym.point_end(); piter++){
-                if(piter->x < minx){
-                    mix = piter->x;
+            for(auto piter = sym.point_begin(); piter != sym.point_end(); ++piter){
+                zbar::Symbol::Point p = *piter;
+                if(p.x < minx){
+                    minx = p.x;
                 }
-                if(piter->x > maxx){
-                    maxx = piter->x;
+                if(p.x > maxx){
+                    maxx = p.x;
                 }
-                if(piter->y < miny){
-                    miy = piter->y
+                if(p.y < miny){
+                    miny = p.y;
                 }
-                if(piter->y > maxy){
-                    maxy = piter->y
+                if(p.y > maxy){
+                    maxy = p.y;
                 }
             }
             zw_symbol_t* s = new zw_symbol_t;
@@ -53,13 +55,13 @@ public:
             return NULL;
         }
     }
-    zw_symbolset_t* make_opaque(){ return static_cast<zw_symbolset_t*>(this);}
+    zw_symbolset_t* make_opaque(){ return (zw_symbolset_t*)(this);}
 
 
 
 };
 
-symbolSet* from_opaque(zw_symbolset_t* opaque){return static_cast<symbolSet*>(opaque);}
+symbolSet* from_opaque(zw_symbolset_t* opaque){return (symbolSet*)(opaque);}
 
 class wrapper{
     typedef uint8_t byte;
@@ -67,15 +69,15 @@ private:
     zbar::ImageScanner scanner;
 public:
     void cfg_set_QR(bool on){
-        scanner.set_config(ZBAR_QRCODE, ZBAR_CFG_ENABLE, (int)on);
+        scanner.set_config(zbar::ZBAR_QRCODE, zbar::ZBAR_CFG_ENABLE, (int)on);
     }
     void cfg_set_all(bool on){
-        scanner.set_config(0, ZBAR_CFG_ENABLE, (int)on);
+        scanner.set_config(zbar::ZBAR_NONE, zbar::ZBAR_CFG_ENABLE, (int)on);
     }
-    std::unique_ptr<symbolSet> scanBytesRGBA32(byte[] imgData, int width, int height){
-        std::array<uint32_t, width*height> bArray;
+    std::unique_ptr<symbolSet> scanBytesRGBA32(byte* imgData, const int width, const int height){
+        std::vector<uint32_t> bArray;
         uint32_t* data = (uint32_t*)imgData; //dangerous cast from uint8_t to uint32_t. Will be wrong on little endian
-        std::copy_n(data, width*height, std::begin(bArray));
+        std::copy_n(data, width*height, std::back_inserter(bArray));
         std::vector<uint32_t> rawData;
         if(!IS_BIG_ENDIAN){
             //Order is wrong
@@ -97,11 +99,11 @@ public:
         return std::move(sset);
     }
     zbar_wrapper_t* make_opaque(){
-        return static_cast<zbar_wrapper_t*>(this);
+        return (zbar_wrapper_t*)(this);
     }
 };
 
-wrapper* from_opaque(zbar_wrapper_t* opaque){return static_cast<wrapper*>(opaque);}
+wrapper* from_opaque(zbar_wrapper_t* opaque){return (wrapper*)(opaque);}
 }
 
 
@@ -111,24 +113,24 @@ zbar_wrapper_t* zbar_wrapper_init(){
     return __wrapper__->make_opaque();
 }
 void zbar_wrapper_destroy(zbar_wrapper_t* zbWrapper){
-    ZBWrapper::wrapper __wrapper__ = from_opaque(zbWrapper);
-    delete wrapper;
+    ZBWrapper::wrapper* __wrapper__ = ZBWrapper::from_opaque(zbWrapper);
+    delete __wrapper__;
 }
-zw_symbolset_t* zbar_scan_RGBA32(zbar_wrapper_t* zbWrapper, uint8_t* imgData, int width, int height){
-    ZBWrapper::wrapper* __wrapper__ = from_opaque(zbWrapper);
+zw_symbolset_t* zbar_wrapper_scan_RGBA32(zbar_wrapper_t* zbWrapper, uint8_t* imgData, int width, int height){
+    ZBWrapper::wrapper* __wrapper__ = ZBWrapper::from_opaque(zbWrapper);
     ZBWrapper::symbolSet* __SymbolSet__ = __wrapper__->scanBytesRGBA32(imgData, width, height).release();
     return __SymbolSet__->make_opaque();
 }
-zw_symbol_t* zbar_symbol_next(zw_symbolset_t* ssPtr){
-    ZBWrapper::symbolSet* __SymbolSet__ = from_opaque(ssPtr);
+zw_symbol_t* zbar_wrapper_symbol_next(zw_symbolset_t* ssPtr){
+    ZBWrapper::symbolSet* __SymbolSet__ = ZBWrapper::from_opaque(ssPtr);
     return __SymbolSet__->nextSymbol();
 }
-void zbar_symbol_destroy(zw_symbol_t* sPtr){
+void zbar_wrapper_symbol_destroy(zw_symbol_t* sPtr){
     delete[] sPtr->symbol_data;
     delete sPtr;
 }
-void zbar_symbolset_destroy(zw_symbolset_t* ssPtr){
-    ZBWrapper::symbolSet* __SymbolSet__ = from_opaque(ssPtr);
+void zbar_wrapper_symbolset_destroy(zw_symbolset_t* ssPtr){
+    ZBWrapper::symbolSet* __SymbolSet__ = ZBWrapper::from_opaque(ssPtr);
     delete __SymbolSet__;
 }
 
