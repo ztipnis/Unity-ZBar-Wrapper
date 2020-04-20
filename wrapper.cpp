@@ -68,6 +68,10 @@ class wrapper{
 private:
     zbar::ImageScanner scanner;
 public:
+    wrapper() : scanner(zbar::ImageScanner(NULL)){
+        scanner.enable_cache(true);
+        scanner.set_config(zbar::ZBAR_NONE, zbar::ZBAR_CFG_ENABLE, 1);
+    }
     void cfg_set_QR(bool on){
         scanner.set_config(zbar::ZBAR_QRCODE, zbar::ZBAR_CFG_ENABLE, (int)on);
     }
@@ -85,18 +89,25 @@ public:
             //std::transform is
             std::transform(bArray.cbegin(), bArray.cend(), std::back_inserter(rawData), [](uint32_t reversed) -> uint32_t{
                 uint8_t* reversedOrder = (uint8_t*)(&reversed);
-                uint32_t correct = (reversedOrder[0] << 24) | (reversedOrder[1] << 16)
-                                   | (reversedOrder[2] << 8) | (reversedOrder[3] <<0);
+                uint8_t z = *reversedOrder, o = *(reversedOrder+sizeof(uint8_t)), tw = *(reversedOrder+(2*sizeof(uint8_t))), th = *(reversedOrder+(3*sizeof(uint8_t)));
+                uint32_t correct = (z << 24) | (o << 16)
+                                   | (tw << 8) | (th <<0);
                 return correct;
             });
         }else{
             std::move(bArray.begin(), bArray.end(), std::back_inserter(rawData));
         }
-        zbar::Image img(width, height, "RBGA", rawData.data(), width*height);
-        int n = scanner.scan(img);
-        auto sset = std::make_unique<symbolSet>(img.symbol_begin(), img.symbol_end());
-        img.set_data(NULL,0);
-        return std::move(sset);
+        zbar::Image img(width, height, "RGB4", rawData.data(), width*height);
+        static unsigned long fourcc = (('Y' & 0xff) |
+                                (('8' & 0xff) << 8) |
+                                (('0' & 0xff) << 16) |
+                                (('0' & 0xff) << 24));
+        zbar::Image grey = img.convert(fourcc);
+        zbar::SymbolSet symbols = (scanner << grey).get_results();
+        auto sset = std::make_unique<symbolSet>(symbols.symbol_begin(), symbols.symbol_end());
+        scanner.recycle_image(img);
+        scanner.recycle_image(grey);
+        return sset;
     }
     zbar_wrapper_t* make_opaque(){
         return (zbar_wrapper_t*)(this);

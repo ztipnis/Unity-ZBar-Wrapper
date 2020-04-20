@@ -39,22 +39,6 @@ FIND_PACKAGE(SWIG REQUIRED)
 message(STATUS ${SWIG_DIR})
 message(STATUS ${SWIG_EXECUTABLE})
 
-include(UseSWIG)
-
-set(LZBAR       "")
-
-if(WIN32)
-    set(LZBAR       "libzbar")
-elseif(ANDROID)
-    message(STATUS "ANDROID_ABI = ${ANDROID_ABI}")
-    set(LZBAR       "zbar")
-elseif(IOS)
-    message(STATUS "IOS_ARCH = ${IOS_ARCH}")
-    set(LZBAR       "zbar")
-else()    
-    set(LZBAR       "zbar")
-endif()
-
 swig_add_library(Unity_ZBar TYPE SHARED LANGUAGE csharp OUTPUT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/products/bindings SOURCES ${SOURCES} ${HEADERS})
 if(APPLE)
     target_link_libraries(Unity_ZBar ${LZBAR} "-fembed-bitcode")
