@@ -39,10 +39,13 @@ FIND_PACKAGE(SWIG REQUIRED)
 message(STATUS ${SWIG_DIR})
 message(STATUS ${SWIG_EXECUTABLE})
 
+include(UseSWIG)
+
+
 swig_add_library(Unity_ZBar TYPE SHARED LANGUAGE csharp OUTPUT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/products/bindings SOURCES ${SOURCES} ${HEADERS})
 if(APPLE)
-    target_link_libraries(Unity_ZBar ${LZBAR} "-fembed-bitcode")
+    target_link_libraries(Unity_ZBar zbar "-fembed-bitcode")
 else()
-    target_link_libraries(Unity_ZBar ${LZBAR})
+    target_link_libraries(Unity_ZBar zbar)
 endif()
 target_compile_features(Unity_ZBar PUBLIC cxx_std_17)

@@ -3,4 +3,4 @@
 	url = https://github.com/leetal/ios-cmake
 [submodule "libzbar"]
 	path = libzbar
-	url = https://github.com/chrisg123/zbar-cmake
+	url = git@github.com:ztipnis/zbar-cmake.git
