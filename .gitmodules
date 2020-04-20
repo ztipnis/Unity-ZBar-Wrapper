@@ -1,0 +1,3 @@
+[submodule "platforms/iOS"]
+	path = platforms/iOS
+	url = https://github.com/leetal/ios-cmake
