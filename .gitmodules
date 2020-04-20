@@ -1,3 +1,6 @@
 [submodule "platforms/iOS"]
 	path = platforms/iOS
 	url = https://github.com/leetal/ios-cmake
+[submodule "libzbar"]
+	path = libzbar
+	url = https://github.com/sbrown89/libzbar

@@ -134,9 +134,16 @@ void zbar_wrapper_symbolset_destroy(zw_symbolset_t* ssPtr){
     delete __SymbolSet__;
 }
 
+void zbar_wrapper_set_all(zbar_wrapper_t* zbWrapper, bool on){
+    ZBWrapper::wrapper* __wrapper__ = ZBWrapper::from_opaque(zbWrapper);
+    __wrapper__->cfg_set_all(on);
+}
 
-
-
+void zbar_wrapper_set_QR(zbar_wrapper_t* zbWrapper, bool on){
+    ZBWrapper::wrapper* __wrapper__ = ZBWrapper::from_opaque(zbWrapper);
+    __wrapper__->cfg_set_QR(on);
+}
+    
 
 
 
