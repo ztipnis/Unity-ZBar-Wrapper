@@ -78,32 +78,39 @@ public:
     void cfg_set_all(bool on){
         scanner.set_config(zbar::ZBAR_NONE, zbar::ZBAR_CFG_ENABLE, (int)on);
     }
-    std::unique_ptr<symbolSet> scanBytesRGBA32(byte* imgData, const int width, const int height){
-        std::vector<uint32_t> bArray;
-        uint32_t* data = (uint32_t*)imgData; //dangerous cast from uint8_t to uint32_t. Will be wrong on little endian
-        std::copy_n(data, width*height, std::back_inserter(bArray));
-        std::vector<uint32_t> rawData;
-        if(!IS_BIG_ENDIAN){
-            //Order is wrong
-            //htonl is not portable without different headers on each system.
-            //std::transform is
-            std::transform(bArray.cbegin(), bArray.cend(), std::back_inserter(rawData), [](uint32_t reversed) -> uint32_t{
-                uint8_t* reversedOrder = (uint8_t*)(&reversed);
-                uint8_t z = *reversedOrder, o = *(reversedOrder+sizeof(uint8_t)), tw = *(reversedOrder+(2*sizeof(uint8_t))), th = *(reversedOrder+(3*sizeof(uint8_t)));
-                uint32_t correct = (z << 24) | (o << 16)
-                                   | (tw << 8) | (th <<0);
-                return correct;
-            });
-        }else{
-            std::move(bArray.begin(), bArray.end(), std::back_inserter(rawData));
+    std::unique_ptr<symbolSet> scanBytesRGBA32(byte* imgData, const char* fmt, const int width, const int height){
+        zbar::Image grey;
+        if(fmt == "RGB4"){
+            std::vector<uint32_t> bArray;
+            uint32_t* data = (uint32_t*)imgData; //dangerous cast from uint8_t to uint32_t. Will be wrong on little endian
+            std::copy_n(data, width*height, std::back_inserter(bArray));
+            std::vector<uint32_t> rawData;
+            if(!IS_BIG_ENDIAN){
+                //Order is wrong
+                //htonl is not portable without different headers on each system.
+                //std::transform is
+                std::transform(bArray.cbegin(), bArray.cend(), std::back_inserter(rawData), [](uint32_t reversed) -> uint32_t{
+                    uint8_t* reversedOrder = (uint8_t*)(&reversed);
+                    uint8_t z = *reversedOrder, o = *(reversedOrder+sizeof(uint8_t)), tw = *(reversedOrder+(2*sizeof(uint8_t))), th = *(reversedOrder+(3*sizeof(uint8_t)));
+                    uint32_t correct = (z << 24) | (o << 16)
+                                       | (tw << 8) | (th <<0);
+                    return correct;
+                });
+            }else{
+                std::move(bArray.begin(), bArray.end(), std::back_inserter(rawData));
+            }
+            zbar::Image img(width, height, fmt, rawData.data(), width*height);
+            static unsigned long fourcc = (('Y' & 0xff) |
+                                    (('8' & 0xff) << 8) |
+                                    (('0' & 0xff) << 16) |
+                                    (('0' & 0xff) << 24));
+            grey = img.convert(fourcc);
+        }else if(fmt == "Y800" || fmt == "GREY"){
+            grey = zbar::Image(width, height, fmt, imgData, width*height);
         }
-        zbar::Image img(width, height, "RGB4", rawData.data(), width*height);
-        static unsigned long fourcc = (('Y' & 0xff) |
-                                (('8' & 0xff) << 8) |
-                                (('0' & 0xff) << 16) |
-                                (('0' & 0xff) << 24));
-        zbar::Image grey = img.convert(fourcc);
-        zbar::SymbolSet symbols = (scanner << grey).get_results();
+        int symbolsRet = scanner.scan(grey);
+        std::cout << "Scan output: " << symbolsRet << std::endl;
+        zbar::SymbolSet symbols = scanner.get_results();
         auto sset = std::make_unique<symbolSet>(symbols.symbol_begin(), symbols.symbol_end());
         scanner.recycle_image(img);
         scanner.recycle_image(grey);
@@ -127,9 +134,9 @@ void zbar_wrapper_destroy(zbar_wrapper_t* zbWrapper){
     ZBWrapper::wrapper* __wrapper__ = ZBWrapper::from_opaque(zbWrapper);
     delete __wrapper__;
 }
-zw_symbolset_t* zbar_wrapper_scan_RGBA32(zbar_wrapper_t* zbWrapper, uint8_t* imgData, int width, int height){
+zw_symbolset_t* zbar_wrapper_scan_RGBA32(zbar_wrapper_t* zbWrapper, const char*, fmt uint8_t* imgData, int width, int height){
     ZBWrapper::wrapper* __wrapper__ = ZBWrapper::from_opaque(zbWrapper);
-    ZBWrapper::symbolSet* __SymbolSet__ = __wrapper__->scanBytesRGBA32(imgData, width, height).release();
+    ZBWrapper::symbolSet* __SymbolSet__ = __wrapper__->scanBytesRGBA32(imgData, fmt, width, height).release();
     return __SymbolSet__->make_opaque();
 }
 zw_symbol_t* zbar_wrapper_symbol_next(zw_symbolset_t* ssPtr){
